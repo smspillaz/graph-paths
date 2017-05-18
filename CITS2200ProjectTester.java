@@ -63,5 +63,8 @@ public class CITS2200ProjectTester {
                 add(centers[i]);
             }
         }}.toString());
+
+        System.out.println("Strongly connected components:");
+        System.out.println(proj.getIntegerStronglyConnectedComponents().toString());
     }
 }

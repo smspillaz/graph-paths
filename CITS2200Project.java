@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Stack;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.PriorityQueue;
 
 import java.util.Comparator;
@@ -182,6 +185,118 @@ public class CITS2200Project {
         return centers.toArray(new String[centers.size()]);
     }
 
+
+    /* Tarjan's algorithm.
+
+    Start with S = an empty array, and initialise all the indices of
+    the nodes -1.
+
+    Now, for each vertex:
+
+     -> if it was not yet assigned an index, call strongconnect.
+
+    Strong connect sets the depth index to v for the smallest unused index
+    and increments that index and pushes it on to the stack S (keep it
+    in a set Si so that we know that it is on the stack quickly).
+
+    Look at each successor, if that vertex has no index, call strongconnect
+    on it (depth first). Set the lowlink member of the vertex to the minimum
+    of the current vertex and the successor.
+
+    If the successor index was defined and it was already on the stack, then
+    set the lowlink to the minimum of the current lowlink of the successor
+    lowlink (in the strongly connected component)
+
+    Now, once we're done with that, if this was a root node (eg, lowlink[v]
+    == index[v], then build up a strongly connected component array
+    using the vertices on the stack)
+    */
+    public static class StronglyConnectedDFS {
+        private List<List<Integer>> components;
+        private int[] indices;
+        private int[] lowlink;
+        private int currentIndex = 0;
+
+        StronglyConnectedDFS(int n) {
+            components = new LinkedList<List<Integer>>();
+            indices = new int[n];
+            lowlink = new int[n];
+            for (int i = 0; i < n; ++i) {
+                indices[i] = -1;
+                lowlink[i] = -1;
+            }
+        }
+
+        public void connect(Stack<Integer> traversal,
+                            Set<Integer> onStack,
+                            Map<Integer, List<Integer>> adjacencyList,
+                            int vertex) {
+            /* First, push this vertex on to the stack */
+            traversal.push(new Integer(vertex));
+            onStack.add(new Integer(vertex));
+
+            /* Then assign its index and lowlink components to the current
+             * available traversal index */
+            indices[vertex] = currentIndex;
+            lowlink[vertex] = currentIndex;
+
+            currentIndex++;
+
+            /* Now, look at all the siblings of this vertex. If no index
+             * has been assigned to them yet, it means that we might be able
+             * to add them to this component by calling strongconnect.
+             * Afterwards, check to see if there are nodes with smaller
+             * indices that are reachable */
+            for (Integer sibling : adjacencyList.get(vertex)) {
+                if (indices[sibling] == -1) {
+                    connect(traversal, onStack, adjacencyList, sibling);
+                    lowlink[vertex] = Math.min(lowlink[vertex], lowlink[sibling]);
+                } else if (onStack.contains(sibling)) {
+                    /* We've seen this sibling before somewhere - we want to
+                     * assign the low-link of this vertex to the index of
+                     * the sibling, since we'll eventually recurse back up to
+                     * it. */
+                    lowlink[vertex] = Math.min(lowlink[vertex], indices[sibling]);
+                }
+            }
+
+            /* Now that we're done exploring siblings, are we the root-most
+             * vertex? (Eg, the lowest-numbered vertex reachable is ourselves)
+             *
+             * If so, it means that we've found a new strongly connected
+             * component. Pop everything off the stack and store in an
+             * array to return later */
+            if (lowlink[vertex] == indices[vertex] && traversal.size () > 0) {
+                List<Integer> component = new LinkedList<Integer>();
+                while (traversal.size() > 0) {
+                    component.add(traversal.pop());
+                }
+                onStack.clear();
+                components.add(component);
+            }
+        }
+
+        public List<List<Integer>> run(Map<Integer, List<Integer>> adjacencyList) {
+            Stack<Integer> traversal = new Stack<Integer>();
+            Set<Integer> onStack = new HashSet<Integer>();
+
+            for (Integer vertex : adjacencyList.keySet()) {
+                /* If we haven't yet explored this vertex, then start
+                 * recursively calling connect on it and its children */
+                if (indices[vertex] == -1) {
+                    connect(traversal, onStack, adjacencyList, vertex);
+                }
+            }
+
+            return components;
+        }
+    }
+
+    public List<List<Integer>> getIntegerStronglyConnectedComponents() {
+        StronglyConnectedDFS search = new StronglyConnectedDFS(adjacencyList.keySet().size());
+        return search.run(adjacencyList);
+    }
+
     /**
      * Finds all the strongly connected components of the page graph.
      * Every strongly connected component can be represented as an array 
@@ -193,7 +308,23 @@ public class CITS2200Project {
      * @return an array containing every strongly connected component.
      */
     public String[][] getStronglyConnectedComponents() {
-        return null;
+
+        List<List<Integer>> integerComponents = getIntegerStronglyConnectedComponents();
+
+        /* Convert back to an array of URL mappings */
+        List<String[]> components = new ArrayList<String[]> () {{
+            for (List<Integer> integerComponent : integerComponents) {
+                List<String> component = new ArrayList<String>() {{
+                    for (Integer vertex : integerComponent) {
+                        add(urlMapping.get(vertex));
+                    }
+                }};
+
+                add(component.toArray(new String[component.size()]));
+            }
+        }};
+
+        return components.toArray(new String[components.size()][]);
     }
 
     /**
