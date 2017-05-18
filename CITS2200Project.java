@@ -268,10 +268,17 @@ public class CITS2200Project {
              * array to return later */
             if (lowlink[vertex] == indices[vertex] && traversal.size () > 0) {
                 List<Integer> component = new LinkedList<Integer>();
-                while (traversal.size() > 0) {
-                    component.add(traversal.pop());
-                }
-                onStack.clear();
+
+                /* Create a new strongly connected component consisting
+                 * only of elements from the top of the stack down to
+                 * the current vertex */
+                Integer topVertex = null;
+                do {
+                    topVertex = traversal.pop();
+                    onStack.remove(topVertex);
+                    component.add(topVertex);
+                } while (topVertex != vertex);
+
                 components.add(component);
             }
         }
