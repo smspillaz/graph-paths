@@ -276,6 +276,9 @@ public class CITS2200Project {
                 do {
                     topVertex = traversal.pop();
                     onStack.remove(topVertex);
+
+                    /* Make sure to reset the lowlink value once we're done */
+                    lowlink[topVertex] = Integer.MAX_VALUE;
                     component.add(topVertex);
                 } while (topVertex != vertex);
 
