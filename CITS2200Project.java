@@ -389,7 +389,12 @@ public class CITS2200Project {
              * and pop that many off the queue. Then, the running time of
              * each thread is min(1, (length / totalLength) * gas). We keep
              * going until we either run out of gas or we don't have any more
-             * threads to execute */
+             * threads to execute
+             *
+             * TODO: What we could also do here is keep track of the total
+             * number of nodes left in the graph. We'll eventually reach
+             * a point where it isn't possible to beat the longest path
+             * and we should return early */
 
             /* Add all pending threads to the thread set */
             while (pendingThreads.size() > 0) {
