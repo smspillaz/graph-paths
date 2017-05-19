@@ -66,5 +66,8 @@ public class CITS2200ProjectTester {
 
         System.out.println("Strongly connected components:");
         System.out.println(proj.getIntegerStronglyConnectedComponents().toString());
+
+        System.out.println("Most interesting hamiltonian path:");
+        System.out.println(Arrays.asList(proj.getHamiltonianPath()).toString());
     }
 }

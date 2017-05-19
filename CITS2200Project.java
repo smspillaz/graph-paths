@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Deque;
 import java.util.Stack;
 import java.util.Set;
 import java.util.HashSet;
@@ -337,6 +338,199 @@ public class CITS2200Project {
         return components.toArray(new String[components.size()][]);
     }
 
+    public static class HamiltonianPathScheduler {
+        public static class HamiltonianPathPrioritisedThread {
+            public int length;
+            public HamiltonianPathThread payload;
+
+            public static class ThreadComparator implements Comparator<HamiltonianPathPrioritisedThread> {
+                public int compare(HamiltonianPathPrioritisedThread o1,
+                                   HamiltonianPathPrioritisedThread o2) {
+                    return o2.length - o1.length;
+                }
+            }
+
+            public HamiltonianPathPrioritisedThread(HamiltonianPathThread payload) {
+                this.payload = payload;
+                this.length = payload.length() + 1;
+            }
+        }
+
+        /* The list of generated paths here is public since we'll read it
+         * out later */
+        public List<List<Integer>> paths;
+
+        private Queue<HamiltonianPathPrioritisedThread> threads;
+        private Queue<HamiltonianPathThread> pendingThreads;
+        private final int gas;
+        private final int concurrencyCap;
+
+        public HamiltonianPathScheduler(int gas,
+                                        int concurrencyCap) {
+            this.gas = gas;
+            this.concurrencyCap = concurrencyCap;
+            this.paths = new LinkedList<List<Integer>>();
+            this.threads = new PriorityQueue<HamiltonianPathPrioritisedThread>(
+                11, new HamiltonianPathPrioritisedThread.ThreadComparator()
+            );
+            this.pendingThreads = new LinkedList<HamiltonianPathThread>();
+        }
+
+        public void add(HamiltonianPathThread thread) {
+            pendingThreads.add(thread);
+        }
+
+        /* Returns true if there is more work to be done, otherwise returns
+         * false */
+        public boolean run(Map<Integer, List<Integer>> adjacencyList,
+                           int adjacencyListLength) {
+            /* Add all the pending threads to the thread set and tally up the
+             * total running time. We cap the number of threads being executed
+             * and pop that many off the queue. Then, the running time of
+             * each thread is min(1, (length / totalLength) * gas). We keep
+             * going until we either run out of gas or we don't have any more
+             * threads to execute */
+
+            /* Add all pending threads to the thread set */
+            while (pendingThreads.size() > 0) {
+                threads.add(new HamiltonianPathPrioritisedThread(pendingThreads.poll()));
+            }
+
+            /* Now, pop up to concurrencyCap threads */
+            int nThreadsToPop = Math.min(concurrencyCap, threads.size());
+
+            /* If we don't have any threads to run, then we're done. Return
+             * false now */
+            if (nThreadsToPop == 0) {
+                return false;
+            }
+
+            int totalLength = 0;
+            HamiltonianPathPrioritisedThread runningThreads[] = new HamiltonianPathPrioritisedThread[nThreadsToPop];
+
+            for (int i = 0; i < nThreadsToPop; ++i) {
+                HamiltonianPathPrioritisedThread prioritisedThread = threads.poll();
+                totalLength += prioritisedThread.length;
+                runningThreads[i] = prioritisedThread;
+            }
+
+            int threadIndex = 0;
+            int remainingGas = this.gas;
+
+            /* Keep going whilst we have some threads and gas */
+            while (threadIndex < nThreadsToPop && remainingGas > 0) {
+                HamiltonianPathPrioritisedThread thread = runningThreads[threadIndex];
+                int threadRuntime = Math.max(1, (thread.length / totalLength) * this.gas);
+                while (threadRuntime-- > 0 && remainingGas-- > 0) {
+                    if (!thread.payload.step(adjacencyList, this)) {
+                        List<Integer> path = thread.payload.generatePath();
+                        this.paths.add(path);
+
+                        /* Now, there is an early-return condition here. If we
+                         * generated the longest possible hamiltonian path then
+                         * we couldn't have generated any other paths that
+                         * are interesting. Immediately return false */
+                        if (path.size() == adjacencyListLength) {
+                            return false;
+                        }
+
+                        break;
+                    }
+                }
+
+                threadIndex++;
+            }
+
+            return true;
+        }
+    }
+
+    public static class HamiltonianPathThread {
+        private List<Integer> path;
+        private Set<Integer> explored;
+
+        /* Next here is the tail of the queue. We have a separate
+         * member here so that we can avoid making unnecessary copies
+         * of the underlying queue if we just have one child */
+        private Integer next;
+
+        private HamiltonianPathThread(List<Integer> path,
+                                      Set<Integer> explored,
+                                      Integer next) {
+            this.path = new LinkedList<Integer>(path);
+            this.explored = new HashSet<Integer>();
+            this.explored.addAll(explored);
+            this.next = next;
+        }
+
+        public HamiltonianPathThread(Integer start) {
+            this.path = new LinkedList<Integer>();
+            this.explored = new HashSet<Integer>();
+            this.next = start;
+        }
+
+        public int length() {
+            return path.size();
+        }
+
+        /* Returns true if the thread can continue, false if there are no
+         * children and it needs to be cleaned up.
+         *
+         * This uses HamiltonianPathScheduler to add new threads to the
+         * list when they are ready.
+         */
+        public boolean step(Map<Integer, List<Integer>> adjacencyList,
+                            HamiltonianPathScheduler scheduler) {
+            Integer node = next;
+            List<Integer> children = adjacencyList.get(node);
+
+            /* Push the next node on to the queue now and set its reference
+             * to null. The path is guaranteed to be complete as soon as
+             * this method returns false, which the outer algorithm
+             * should keep running until that happens */
+            this.path.add(next);
+            this.explored.add(next);
+
+            this.next = null;
+
+            /* Count here refers to the number of nodes that we've explored.
+             * Exploring a node either means adding it to our stack or creating
+             * a copy of this thread and adding it to that thread's stack.
+             *
+             * We don't explore nodes we've already seen in this thread */
+            int count = 0;
+
+            if (children != null) {
+                for (Integer child : children) {
+                    if (this.explored.contains(child)) {
+                        continue;
+                    }
+
+                    if (count == 0) {
+                        /* We just set next on this thread and continue - means
+                         * that we don't have to copy things unnecessarily */
+                        this.next = child;
+                    } else {
+                        /* We have to fork this thread. Create a new thread from
+                         * everything we currently have and set the next member
+                         * appropriately */
+                        scheduler.add(new HamiltonianPathThread(this.path,
+                                                                this.explored,
+                                                                child));
+                    }
+
+                    count++;
+                }
+            }
+
+            return count > 0;
+        }
+
+        public List<Integer> generatePath() {
+            return this.path;
+        }
+    }
+
     /**
      * Finds a Hamiltonian path in the page graph. There may be many
      * possible Hamiltonian paths. Any of these paths is a correct output.
@@ -350,6 +544,62 @@ public class CITS2200Project {
      * @return a Hamiltonian path of the page graph.
      */
     public String[] getHamiltonianPath() {
-        return null;
+        /* Basically, the only solution here is backtracking. However, we
+         * are interested in the longest hamiltonian path. One heurestic
+         * here is that if a path is long, we should probably spend more
+         * time exploring it than we would exploring a short path. But we
+         * also don't want to waste time on rabbit holes and ignore other
+         * potential solutions.
+         *
+         * A clever way to do this to imitate the design of React Fibres.
+         *
+         * Essentially, we have a couple of "threads" going, where we
+         * create a new "thread" every time there is a fork in the graph. Each
+         * thread remembers its path and where it was in the depth-first
+         * search process. Threads can be run for a single iteration. If
+         * a thread is stuck in a situation where it has to backtrack, then it
+         * adds that path and exits.
+         *
+         * We run a scheduler at the top of the loop which has a certain amount
+         * of "gas". Threads with a longer path have a higher proportion of
+         * the available gas and thus get to run for longer.
+         *
+         * This design is fairly easily parallelizable - you can allocate one
+         * scheduler per thread and have them all share the same bucket, where
+         * we push paths into the bucket as we go.
+         */
+        int gas = 20;
+        int concurrencyCap = 4;
+
+        HamiltonianPathScheduler scheduler = new HamiltonianPathScheduler(
+            gas,
+            concurrencyCap
+        );
+
+        /* Go over all the start vertices and all them to the scheduler */
+        for (Integer start : adjacencyList.keySet()) {
+            scheduler.add(new HamiltonianPathThread(start));
+        }
+
+        /* Run the scheduler */
+        int adjacencyListLength = adjacencyList.keySet().size();
+        while (scheduler.run(adjacencyList, adjacencyListLength));
+
+        /* Now that we're done, collect up all the paths and convert them
+         * into paths of strings. Pick the longest, since I guess that's
+         * the most interesting */
+        String longestPath[] = new String[0];
+        for (List<Integer> nodePath : scheduler.paths) {
+            int nodePathSize = nodePath.size();
+            if (nodePathSize > longestPath.length) {
+                longestPath = new ArrayList<String>() {{
+                    for (Integer node : nodePath) {
+                        add(urlMapping.get(node));
+                    }
+                }}.toArray(new String[nodePathSize]);
+            }
+        }
+
+        return longestPath;
     }
 }
