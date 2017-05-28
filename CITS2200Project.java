@@ -497,6 +497,10 @@ public class CITS2200Project {
                 threadIndex++;
             }
 
+            /* We didn't get to execute some threads, so put them back on the queue */
+            for (; threadIndex < nThreadsToPop; ++threadIndex) {
+                add(runningThreads[threadIndex].payload);
+            }
             return true;
         }
     }
