@@ -468,7 +468,9 @@ public class CITS2200Project {
             /* Keep going whilst we have some threads and gas */
             while (threadIndex < nThreadsToPop && remainingGas > 0) {
                 HamiltonianPathPrioritisedThread thread = runningThreads[threadIndex];
-                int threadRuntime = Math.max(1, (thread.length / totalLength) * this.gas);
+                int threadRuntime = (int) Math.floor(Math.max(1, (thread.length / (float) totalLength) * this.gas));
+                boolean completed = false;
+
                 while (threadRuntime-- > 0 && remainingGas-- > 0) {
                     if (!thread.payload.step(adjacencyList, this)) {
                         List<Integer> path = thread.payload.generatePath();
@@ -481,9 +483,15 @@ public class CITS2200Project {
                         if (path.size() == adjacencyListLength) {
                             return false;
                         }
-
+                        completed = true;
                         break;
                     }
+                }
+
+                if (!completed) {
+                    /* This thread should continue, add it to the
+                     * priority queue */
+                    add(thread.payload);
                 }
 
                 threadIndex++;
