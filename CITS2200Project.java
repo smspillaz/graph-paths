@@ -10,6 +10,15 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.PriorityQueue;
 
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import java.lang.InterruptedException;
+import java.lang.Runnable;
+import java.lang.Math;
+
 import java.util.Comparator;
 
 public class CITS2200Project {
@@ -338,6 +347,42 @@ public class CITS2200Project {
         return components.toArray(new String[components.size()][]);
     }
 
+    public static class HamiltonianLongestPathBucket {
+        public BlockingQueue<List<Integer>> queue;
+        private int longest;
+
+        public HamiltonianLongestPathBucket() {
+            this.queue = new LinkedBlockingQueue<List<Integer>>();
+            this.longest = 0;
+        }
+
+        public synchronized void consume(List<Integer> path) {
+            if (path.size() > this.longest) {
+                this.queue.add(path);
+                this.longest = path.size();
+            }
+        }
+    }
+
+    public static class HamiltonianPathWorker implements Runnable {
+        private HamiltonianPathScheduler scheduler;
+        private Map<Integer, List<Integer>> adjacencyList;
+        private int adjacencyListLength;
+
+        public HamiltonianPathWorker(HamiltonianPathScheduler scheduler,
+                                     Map<Integer, List<Integer>> adjacencyList) {
+            this.scheduler = scheduler;
+            this.adjacencyList = adjacencyList;
+            this.adjacencyListLength = adjacencyList.size();
+        }
+
+        public void run() {
+            /* Just keep on running the scheduler until it completes. The
+             * scheduler will post work into the relevant bucket. */
+            while (scheduler.run(adjacencyList, adjacencyListLength));
+        }
+    }
+
     public static class HamiltonianPathScheduler {
         public static class HamiltonianPathPrioritisedThread {
             public int length;
@@ -356,24 +401,22 @@ public class CITS2200Project {
             }
         }
 
-        /* The list of generated paths here is public since we'll read it
-         * out later */
-        public List<List<Integer>> paths;
-
+        private HamiltonianLongestPathBucket bucket;
         private Queue<HamiltonianPathPrioritisedThread> threads;
         private Queue<HamiltonianPathThread> pendingThreads;
         private final int gas;
         private final int concurrencyCap;
 
         public HamiltonianPathScheduler(int gas,
-                                        int concurrencyCap) {
+                                        int concurrencyCap,
+                                        HamiltonianLongestPathBucket bucket) {
             this.gas = gas;
             this.concurrencyCap = concurrencyCap;
-            this.paths = new LinkedList<List<Integer>>();
             this.threads = new PriorityQueue<HamiltonianPathPrioritisedThread>(
                 11, new HamiltonianPathPrioritisedThread.ThreadComparator()
             );
             this.pendingThreads = new LinkedList<HamiltonianPathThread>();
+            this.bucket = bucket;
         }
 
         public void add(HamiltonianPathThread thread) {
@@ -429,7 +472,7 @@ public class CITS2200Project {
                 while (threadRuntime-- > 0 && remainingGas-- > 0) {
                     if (!thread.payload.step(adjacencyList, this)) {
                         List<Integer> path = thread.payload.generatePath();
-                        this.paths.add(path);
+                        this.bucket.consume(path);
 
                         /* Now, there is an early-return condition here. If we
                          * generated the longest possible hamiltonian path then
@@ -536,19 +579,35 @@ public class CITS2200Project {
         }
     }
 
-    /**
-     * Finds a Hamiltonian path in the page graph. There may be many
-     * possible Hamiltonian paths. Any of these paths is a correct output.
-     * This method should never be called on a graph with more than 20
-     * vertices. If there is no Hamiltonian path, this method will
-     * return an empty array. The output array should contain the URLs of pages
-     * in a Hamiltonian path. The order matters, as the elements of the
-     * array represent this path in sequence. So the element [0] is the start
-     * of the path, and [1] is the next page, and so on.
-     * 
-     * @return a Hamiltonian path of the page graph.
-     */
-    public String[] getHamiltonianPath() {
+    private static List<HamiltonianPathScheduler> threadPartitions(Map<Integer, List<Integer>> adjacencyList,
+                                                                   HamiltonianLongestPathBucket bucket,
+                                                                   int concurrencyCap,
+                                                                   int parallelismCap,
+                                                                   int gas) {
+        List<HamiltonianPathScheduler> partitions = new LinkedList<HamiltonianPathScheduler>();
+        HamiltonianPathScheduler current = new HamiltonianPathScheduler(gas, concurrencyCap, bucket);
+
+        int partitionCounter = 0;
+        int partitionSize = (int) Math.ceil(adjacencyList.keySet().size() / (float) parallelismCap);
+
+        for (Integer start : adjacencyList.keySet()) {
+            current.add(new HamiltonianPathThread(start));
+
+            if (++partitionCounter == partitionSize) {
+                partitions.add(current);
+                current = new HamiltonianPathScheduler(gas, concurrencyCap, bucket);
+                partitionCounter = 0;
+            }
+        }
+
+        if (partitionCounter > 0) {
+            partitions.add(current);
+        }
+
+        return partitions;
+    }
+
+    private String[] getHamiltonianPathUsingDFSFibres() {
         /* Basically, the only solution here is backtracking. However, we
          * are interested in the longest hamiltonian path. One heurestic
          * here is that if a path is long, we should probably spend more
@@ -575,36 +634,75 @@ public class CITS2200Project {
          */
         int gas = 20;
         int concurrencyCap = 4;
+        int parallelismCap = 4;
 
-        HamiltonianPathScheduler scheduler = new HamiltonianPathScheduler(
-            gas,
-            concurrencyCap
-        );
+        HamiltonianLongestPathBucket bucket = new HamiltonianLongestPathBucket();
+        BlockingQueue<Runnable> threadPoolWorkQueue = new LinkedBlockingQueue<Runnable>();
 
-        /* Go over all the start vertices and all them to the scheduler */
-        for (Integer start : adjacencyList.keySet()) {
-            scheduler.add(new HamiltonianPathThread(start));
+        /* Create a ThreadPoolExecutor with our tasks and then call shutdown()
+         * on it. This will cause it to process all the tasks which we
+         * submitted to it. We'll lazy fetch the results of each
+         * task as they come streaming into the bucket */
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(parallelismCap,
+                                                             parallelismCap,
+                                                             0,
+                                                             TimeUnit.SECONDS,
+                                                             new LinkedBlockingQueue<Runnable>());
+
+        /* Go over all the start vertices and add them to
+         * schedulers, which are then added to worker threads */
+        for (HamiltonianPathScheduler scheduler: threadPartitions(adjacencyList,
+                                                                  bucket,
+                                                                  concurrencyCap,
+                                                                  parallelismCap,
+                                                                  gas)) {
+            executor.execute(new HamiltonianPathWorker(scheduler, adjacencyList));
         }
 
-        /* Run the scheduler */
-        int adjacencyListLength = adjacencyList.keySet().size();
-        while (scheduler.run(adjacencyList, adjacencyListLength));
+        executor.shutdown();
 
-        /* Now that we're done, collect up all the paths and convert them
-         * into paths of strings. Pick the longest, since I guess that's
-         * the most interesting */
-        String longestPath[] = new String[0];
-        for (List<Integer> nodePath : scheduler.paths) {
-            int nodePathSize = nodePath.size();
-            if (nodePathSize > longestPath.length) {
-                longestPath = new ArrayList<String>() {{
-                    for (Integer node : nodePath) {
-                        add(urlMapping.get(node));
-                    }
-                }}.toArray(new String[nodePathSize]);
+        List<Integer> hamiltonianPath = new LinkedList<Integer>();
+
+        /* Now that the executor is running, consume paths as they come
+         * off the queue. Note that every path we receive will be strictly
+         * longer than any other path, so we can just replace our existing
+         * path with that one. Our strategy here is just to poll every
+         * few milliseconds and then check if the executor is done
+         * with its work */
+        while (!executor.isTerminated() || !bucket.queue.isEmpty()) {
+            try {
+                List<Integer> candidate = bucket.queue.poll(250, TimeUnit.MILLISECONDS);
+                if (candidate != null) {
+                    hamiltonianPath = candidate;
+                }
+            } catch (InterruptedException e) {
+                continue;
             }
         }
 
-        return longestPath;
+        /* Now that we're done, collect up the longest path and turn it
+         * back into strings, since that is the most interesting */
+        final List<Integer> longestHamiltonianPath = hamiltonianPath;
+        return new ArrayList<String>() {{
+            for (Integer node : longestHamiltonianPath) {
+                add(urlMapping.get(node));
+            }
+        }}.toArray(new String[longestHamiltonianPath.size()]);
+    }
+
+    /**
+     * Finds a Hamiltonian path in the page graph. There may be many
+     * possible Hamiltonian paths. Any of these paths is a correct output.
+     * This method should never be called on a graph with more than 20
+     * vertices. If there is no Hamiltonian path, this method will
+     * return an empty array. The output array should contain the URLs of pages
+     * in a Hamiltonian path. The order matters, as the elements of the
+     * array represent this path in sequence. So the element [0] is the start
+     * of the path, and [1] is the next page, and so on.
+     *
+     * @return a Hamiltonian path of the page graph.
+     */
+    public String[] getHamiltonianPath() {
+        return getHamiltonianPathUsingDFSFibres();
     }
 }
