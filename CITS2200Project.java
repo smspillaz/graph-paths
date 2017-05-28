@@ -702,6 +702,132 @@ public class CITS2200Project {
         }}.toArray(new String[longestHamiltonianPath.size()]);
     }
 
+    public static int[][] adjacencyListToMatrix(Map<Integer, List<Integer>> adjacencyList) {
+        int size = adjacencyList.keySet().size();
+        int[][] matrix = new int[size][size];
+
+        /* Go through each member of adjacencyList and set elements in
+         * matrix as appropriate */
+        for (Integer src : adjacencyList.keySet()) {
+            for (Integer dst : adjacencyList.get(src)) {
+                matrix[src][dst] = 1;
+            }
+        }
+
+        return matrix;
+    }
+
+    public String[] getHamiltonianPathUsingDynamicProgramming() {
+        /* Permutations here are binary strings indicating which nodes
+         * are in the potential set of nodes forming a path */
+        int vertices = adjacencyList.keySet().size();
+
+        int permutations = (1 << vertices);
+        boolean solution[][] = new boolean[vertices][permutations];
+
+        /* Clear array */
+        for (int i = 0; i < permutations; ++i) {
+            for (int j = 0; j < vertices; ++j) {
+                solution[j][i] = false;
+            }
+        }
+
+        /* For each vertex, the ith bit connected to itself forms a hamiltonian path */
+        for (int i = 0; i < vertices; ++i) {
+            solution[i][(1 << i)] = true;
+        }
+
+        int[][] matrix = adjacencyListToMatrix(adjacencyList);
+        int[] best = new int[vertices];
+
+        /* Now for each permutation */
+        for (int i = 1; i < permutations; ++i) {
+            /* And each potential ending vertex in that permutation */
+            for (int j = 0; j < vertices; ++j) {
+                /* This ending vertex is in the permutation */
+                if ((i & (1 << j)) == (1 << j)) {
+                    /* Now for each vertex in the set */
+                    for (int k = 0; k < vertices; ++k) {
+                        /* Check the following conditions:
+                         * (1) This vertex isn't the ending vertex
+                         * (2) This vertex is in the set
+                         * (3) Vertex k is connected to vertex j
+                         */
+                        if (j != k && ((i & (1 << k)) == (1 << k)) && matrix[k][j] == 1) {
+                            /* Check if we had calculated beforehand that
+                             * the path NOT including vertex j was hamiltonian. If
+                             * so, then we can append this vertex (because j and k)
+                             * are connected). */
+                            if (solution[k][i ^ (1 << j)]) {
+                                solution[j][i] = true;
+                                /* We also set this best member for j to be i. This
+                                 * represents the best known hamiltonian set ending
+                                 * in j. Since we are always counting up, the number
+                                 * will always be the highest */
+                                if (Integer.bitCount(i) > Integer.bitCount(best[j])) {
+                                    best[j] = i;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /* Now that we're done building up this matrix, we can yield the longest
+         * hamiltonian path by working backwards. First, find the element of
+         * the best[] array with the highest popcount, given by index v. Start with:
+         *
+         * mask = best[v];
+         *
+         * Push v on to a stack. Then mask out v from best[v]:
+         *
+         * mask ^= (1 << v)
+         *
+         * and scan from u to n until we find another vertex where u was an
+         * ending vertex for that hamiltonian set and push that on to the stack.
+         *
+         * Continue until mask == 0. Pop the elements from the stack in reverse
+         * and that will give you your hamiltonian path.
+         */
+
+        /* Calculating highest popcount */
+        int v = 0;
+        int bestPopcount = 0;
+        for (int i = 0; i < vertices; ++i) {
+            int count = Integer.bitCount(best[i]);
+            if (Integer.bitCount(best[i]) > bestPopcount) {
+                v = i;
+                bestPopcount = count;
+            }
+        }
+
+        /* Now that we've done that, work backwards until we have our path */
+        Stack<Integer> stack = new Stack<Integer>();
+        int mask = best[v];
+
+        while (mask != 0L) {
+            stack.push(v);
+            mask ^= (1 << v);
+            for (int u = 0; u < vertices; ++u) {
+                if (solution[u][mask]) {
+                    v = u;
+                    break;
+                }
+            }
+        }
+
+        /* Now just pop elements off the stack and on to a linked list
+         * (we can do the string conversion here), that represents
+         * the hamiltonian path from from to back */
+        List<String> path = new LinkedList<String>();
+        while (!stack.empty()) {
+            path.add(urlMapping.get(stack.pop()));
+        }
+
+        return path.toArray(new String[path.size()]);
+    }
+
     /**
      * Finds a Hamiltonian path in the page graph. There may be many
      * possible Hamiltonian paths. Any of these paths is a correct output.
@@ -715,6 +841,10 @@ public class CITS2200Project {
      * @return a Hamiltonian path of the page graph.
      */
     public String[] getHamiltonianPath() {
-        return getHamiltonianPathUsingDFSFibres();
+        if (adjacencyList.keySet().size() > 30) {
+            return getHamiltonianPathUsingDFSFibres();
+        } else {
+            return getHamiltonianPathUsingDynamicProgramming();
+        }
     }
 }
