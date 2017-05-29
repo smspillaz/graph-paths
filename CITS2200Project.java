@@ -186,17 +186,19 @@ public class CITS2200Project {
         /* Now that we have explored the connection of every vertex to every
          * other vertex, we can just take the minima of the priority queue */
         List<String> centers = new ArrayList<String>();
-        VertexWeight node = queue.poll();
-        int minima = node.weight;
-        centers.add(urlMapping.get(node.vertex));
-
-        while (queue.size() != 0) {
-            node = queue.poll();
-            if (node.weight > minima) {
-                break;
-            }
-
+        if (queue.size() > 0) {
+            VertexWeight node = queue.poll();
+            int minima = node.weight;
             centers.add(urlMapping.get(node.vertex));
+
+            while (queue.size() != 0) {
+                node = queue.poll();
+                if (node.weight > minima) {
+                    break;
+                }
+
+                centers.add(urlMapping.get(node.vertex));
+            }
         }
 
         return centers.toArray(new String[centers.size()]);
@@ -803,6 +805,10 @@ public class CITS2200Project {
          * Continue until mask == 0. Pop the elements from the stack in reverse
          * and that will give you your hamiltonian path.
          */
+
+        if (best.length == 0) {
+            return new String[0];
+        }
 
         /* Calculating highest popcount */
         int v = 0;
