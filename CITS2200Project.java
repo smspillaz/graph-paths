@@ -61,6 +61,10 @@ public class CITS2200Project {
         adjacent.add(new Integer(to));
     }
 
+    public void addEdge(int i, int j) {
+        addEdge(String.valueOf(i), String.valueOf(j));
+    }
+
     public class PQComparator implements Comparator<VertexWeight> {
         public int compare(VertexWeight o1, VertexWeight o2) {
             return o1.weight - o2.weight;
