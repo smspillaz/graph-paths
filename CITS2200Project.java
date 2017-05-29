@@ -657,7 +657,7 @@ public class CITS2200Project {
          * scheduler per thread and have them all share the same bucket, where
          * we push paths into the bucket as we go.
          */
-        int gas = 20;
+        int gas = 10;
         int concurrencyCap = 4;
         int parallelismCap = 4;
 
