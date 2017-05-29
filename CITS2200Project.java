@@ -30,6 +30,8 @@ public class CITS2200Project {
     public Map<Integer, List<Integer>> adjacencyList = new HashMap<Integer, List<Integer>>();
     int nextNode = 0;
 
+    static int opcount = 0;
+
     private void ensureMappingForString(String str) {
         if (!nodeMapping.containsKey(str)) {
             nodeMapping.put(str, nextNode);
@@ -108,6 +110,7 @@ public class CITS2200Project {
 
                     if (distances[sibling] == -1) {
                         queue.add(new VertexWeight(sibling, total));
+                        CITS2200Project.opcount++;
                     }
                 }
             }
@@ -258,6 +261,7 @@ public class CITS2200Project {
              * Afterwards, check to see if there are nodes with smaller
              * indices that are reachable */
             for (Integer sibling : adjacencyList.get(vertex)) {
+                CITS2200Project.opcount++;
                 if (indices[sibling] == -1) {
                     connect(traversal, onStack, adjacencyList, sibling);
                     lowlink[vertex] = Math.min(lowlink[vertex], lowlink[sibling]);
@@ -290,6 +294,7 @@ public class CITS2200Project {
                     /* Make sure to reset the lowlink value once we're done */
                     lowlink[topVertex] = Integer.MAX_VALUE;
                     component.add(topVertex);
+                    CITS2200Project.opcount++;
                 } while (topVertex != vertex);
 
                 components.add(component);
@@ -562,6 +567,8 @@ public class CITS2200Project {
 
             if (children != null) {
                 for (Integer child : children) {
+                    CITS2200Project.opcount++;
+
                     if (this.explored.contains(child)) {
                         continue;
                     }
@@ -753,6 +760,8 @@ public class CITS2200Project {
                          * (2) This vertex is in the set
                          * (3) Vertex k is connected to vertex j
                          */
+                        CITS2200Project.opcount++;
+
                         if (j != k && ((i & (1 << k)) == (1 << k)) && matrix[k][j] == 1) {
                             /* Check if we had calculated beforehand that
                              * the path NOT including vertex j was hamiltonian. If
