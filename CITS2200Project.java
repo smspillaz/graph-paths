@@ -779,9 +779,7 @@ public class CITS2200Project {
                                  * represents the best known hamiltonian set ending
                                  * in j. Since we are always counting up, the number
                                  * will always be the highest */
-                                if (Integer.bitCount(i) > Integer.bitCount(best[j])) {
-                                    best[j] = i;
-                                }
+                                best[j] = i;
                             }
                         }
                     }
