@@ -3,8 +3,8 @@ import java.util.*;
 
 import java.lang.Math;
 
-public class CITS2200ProjectTester {
-    public static void loadGraph(CITS2200Project project, String path) {
+public class CITS2200ProjectImplementationTester {
+    public static void loadGraph(CITS2200ProjectImplementation project, String path) {
         // The graph is in the following format:
         // Every pair of consecutive lines represent a directed edge.
         // The edge goes from the URL in the first line to the URL in the second line.
@@ -24,20 +24,20 @@ public class CITS2200ProjectTester {
 
     public static class PerformanceAnalysis {
         public static interface Task {
-            public void run(CITS2200Project proj);
+            public void run(CITS2200ProjectImplementation proj);
         }
 
-        public static void run(CITS2200Project proj, Task task, String descriptor) {
-            CITS2200Project.opcount = 0;
+        public static void run(CITS2200ProjectImplementation proj, Task task, String descriptor) {
+            CITS2200ProjectImplementation.opcount = 0;
             long startTime = System.nanoTime();
             task.run(proj);
             long finishTime = System.nanoTime();
 
-            System.out.println(descriptor + "\t" + CITS2200Project.opcount + "\t" + ((finishTime - startTime) / 1000));
+            System.out.println(descriptor + "\t" + CITS2200ProjectImplementation.opcount + "\t" + ((finishTime - startTime) / 1000));
         }
     }
 
-    public static void performTestsOnProject(CITS2200Project proj) {
+    public static void performTestsOnProject(CITS2200ProjectImplementation proj) {
         // Print out the graph mappings
         for (Integer vertex : proj.urlMapping.keySet()) {
             System.out.println(vertex + " " + proj.urlMapping.get(vertex));
@@ -76,7 +76,7 @@ public class CITS2200ProjectTester {
         System.out.println(Arrays.asList(proj.getHamiltonianPath()).toString());
     }
 
-    public static void loadRandomGraph(CITS2200Project proj, int size, double density) {
+    public static void loadRandomGraph(CITS2200ProjectImplementation proj, int size, double density) {
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < size; ++j) {
                 if (Math.random() < density) {
@@ -86,7 +86,7 @@ public class CITS2200ProjectTester {
         }
     }
 
-    public static void loadIncreasingGraph(CITS2200Project proj, int size) {
+    public static void loadIncreasingGraph(CITS2200ProjectImplementation proj, int size) {
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < (i + 1); ++j) {
                 proj.addEdge(i, j);
@@ -94,7 +94,7 @@ public class CITS2200ProjectTester {
         }
     }
 
-    public static void loadFullyConncetedGraph(CITS2200Project proj, int size) {
+    public static void loadFullyConncetedGraph(CITS2200ProjectImplementation proj, int size) {
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < size; ++j) {
                 proj.addEdge(i, j);
@@ -104,7 +104,7 @@ public class CITS2200ProjectTester {
 
     public static void main(String[] args) {
         if (args.length > 1) {
-            System.err.println("usage: CITS2200ProjectTester [GRAPH_FILE]");
+            System.err.println("usage: CITS2200ProjectImplementationTester [GRAPH_FILE]");
             System.exit(1);
         }
 
@@ -113,7 +113,7 @@ public class CITS2200ProjectTester {
             // Change this to be the path to the graph file.
             String pathToGraphFile = args[0];
             // Create an instance of your implementation.
-            CITS2200Project proj = new CITS2200Project();
+            CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
             // Load the graph into the project.
             loadGraph(proj, pathToGraphFile);
             performTestsOnProject(proj);
@@ -129,11 +129,11 @@ public class CITS2200ProjectTester {
             System.out.println("Shortest paths with random graphs");
             for (int size = 2; size < maxSize; ++size) {
                 for (int j = 0; j < densities.length; ++j) {
-                    CITS2200Project proj = new CITS2200Project();
+                    CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                     loadRandomGraph(proj, size, densities[j]);
 
                     PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                        public void run(CITS2200Project proj) {
+                        public void run(CITS2200ProjectImplementation proj) {
                             for (int i = 0; i < maxSize; ++i) {
                                 if (proj.adjacencyList.get(i) != null)
                                     proj.getShortestPaths(i);
@@ -146,11 +146,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("Shortest paths with increasing graphs");
             for (int size = 2; size < maxSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadIncreasingGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         for (int i = 0; i < maxSize; ++i) {
                             if (proj.adjacencyList.get(i) != null)
                                 proj.getShortestPaths(i);
@@ -162,11 +162,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("Shortest paths with fully connected graph");
             for (int size = 2; size < maxSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadFullyConncetedGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         for (int i = 0; i < maxSize; ++i) {
                             if (proj.adjacencyList.get(i) != null)
                                 proj.getShortestPaths(i);
@@ -180,11 +180,11 @@ public class CITS2200ProjectTester {
             System.out.println("Graph centers with random graphs");
             for (int size = 2; size < maxSize; ++size) {
                 for (int j = 0; j < densities.length; ++j) {
-                    CITS2200Project proj = new CITS2200Project();
+                    CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                     loadRandomGraph(proj, size, densities[j]);
 
                     PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                        public void run(CITS2200Project proj) {
+                        public void run(CITS2200ProjectImplementation proj) {
                             proj.getCenters();
                         }
                     }, "" + size);
@@ -194,11 +194,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("Graph centers with increasing graphs");
             for (int size = 2; size < maxSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadIncreasingGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getCenters();
                     }
                 }, "" + size);
@@ -207,11 +207,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("Graph centers with fully connected graph");
             for (int size = 2; size < maxSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadFullyConncetedGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getCenters();
                     }
                 }, "" + size);
@@ -222,11 +222,11 @@ public class CITS2200ProjectTester {
             System.out.println("Strongly connected components with random graphs");
             for (int size = 2; size < maxSize; ++size) {
                 for (int j = 0; j < densities.length; ++j) {
-                    CITS2200Project proj = new CITS2200Project();
+                    CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                     loadRandomGraph(proj, size, densities[j]);
 
                     PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                        public void run(CITS2200Project proj) {
+                        public void run(CITS2200ProjectImplementation proj) {
                             proj.getIntegerStronglyConnectedComponents();
                         }
                     }, "" + size);
@@ -236,11 +236,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("Strongly connected components with increasing graphs");
             for (int size = 2; size < maxSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadIncreasingGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getIntegerStronglyConnectedComponents();
                     }
                 }, "" + size);
@@ -249,11 +249,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("Strongly connected components with fully connected graph");
             for (int size = 2; size < maxSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadFullyConncetedGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getIntegerStronglyConnectedComponents();
                     }
                 }, "" + size);
@@ -264,11 +264,11 @@ public class CITS2200ProjectTester {
             System.out.println("DP Hamiltonian Path with random graphs");
             for (int size = 2; size < hamiltonianSize; ++size) {
                 for (int j = 0; j < densities.length; ++j) {
-                    CITS2200Project proj = new CITS2200Project();
+                    CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                     loadRandomGraph(proj, size, densities[j]);
 
                     PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                        public void run(CITS2200Project proj) {
+                        public void run(CITS2200ProjectImplementation proj) {
                             proj.getHamiltonianPathUsingDynamicProgramming();
                         }
                     }, "" + size);
@@ -277,11 +277,11 @@ public class CITS2200ProjectTester {
 
             System.out.println("DP Hamiltonian Path with increasing graphs");
             for (int size = 2; size < hamiltonianSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadIncreasingGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getHamiltonianPathUsingDynamicProgramming();
                     }
                 }, "" + size);
@@ -290,11 +290,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("DP Hamiltonian Path with fully connected graph");
             for (int size = 2; size < hamiltonianSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadFullyConncetedGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getHamiltonianPathUsingDynamicProgramming();
                     }
                 }, "" + size);
@@ -305,11 +305,11 @@ public class CITS2200ProjectTester {
             System.out.println("DFS Hamiltonian Path with random graphs");
             for (int size = 2; size < hamiltonianSize; ++size) {
                 for (int j = 0; j < densities.length; ++j) {
-                    CITS2200Project proj = new CITS2200Project();
+                    CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                     loadRandomGraph(proj, size, densities[j]);
 
                     PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                        public void run(CITS2200Project proj) {
+                        public void run(CITS2200ProjectImplementation proj) {
                             proj.getHamiltonianPathUsingDFSFibres();
                         }
                     }, "" + size);
@@ -319,11 +319,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("DFS Hamiltonian Path with increasing graphs");
             for (int size = 2; size < hamiltonianSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadIncreasingGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getHamiltonianPathUsingDFSFibres();
                     }
                 }, "" + size);
@@ -332,11 +332,11 @@ public class CITS2200ProjectTester {
             System.out.println("--");
             System.out.println("DFS Hamiltonian Path with fully connected graph");
             for (int size = 2; size < hamiltonianSize; ++size) {
-                CITS2200Project proj = new CITS2200Project();
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
                 loadFullyConncetedGraph(proj, size);
 
                 PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
-                    public void run(CITS2200Project proj) {
+                    public void run(CITS2200ProjectImplementation proj) {
                         proj.getHamiltonianPathUsingDFSFibres();
                     }
                 }, "" + size);

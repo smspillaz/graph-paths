@@ -21,7 +21,7 @@ import java.lang.Math;
 
 import java.util.Comparator;
 
-public class CITS2200Project {
+public class CITS2200ProjectImplementation implements CITS2200Project {
     /* The invariant here is that the size of these three maps is always
      * equal. If a node exists, it will have mapping from an int to a string,
      * a string to an int and an int to a sibling list */
