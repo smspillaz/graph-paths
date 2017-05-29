@@ -83,7 +83,7 @@ public class CITS2200Project {
 
     public int[] getShortestPaths(int from) {
         Queue<VertexWeight> queue = new PriorityQueue<VertexWeight>(11, new PQComparator());
-        int distances[] = new int[adjacencyList.keySet().size() ];
+        int distances[] = new int[adjacencyList.keySet().size()];
 
         /* Initialize all distances to -1 */
         for (int i = 0; i < adjacencyList.keySet().size() ; ++i) {
