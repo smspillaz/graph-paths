@@ -632,7 +632,7 @@ public class CITS2200Project {
         return partitions;
     }
 
-    private String[] getHamiltonianPathUsingDFSFibres() {
+    public String[] getHamiltonianPathUsingDFSFibres() {
         /* Basically, the only solution here is backtracking. However, we
          * are interested in the longest hamiltonian path. One heurestic
          * here is that if a path is long, we should probably spend more
