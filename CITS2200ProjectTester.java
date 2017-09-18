@@ -3,7 +3,7 @@ import java.util.*;
 
 import java.lang.Math;
 
-public class CITS2200ProjectImplementationTester {
+public class CITS2200ProjectTester {
     public static void loadGraph(CITS2200ProjectImplementation project, String path) {
         // The graph is in the following format:
         // Every pair of consecutive lines represent a directed edge.
@@ -68,6 +68,16 @@ public class CITS2200ProjectImplementationTester {
                 add(centers[i]);
             }
         }}.toString());
+
+        CITS2200ProjectImplementation.useFloydWarshalForAllPairsShortestPaths = true;
+        System.out.println("Center nodes (Floyd Warshal):");
+        System.out.println(new ArrayList<String>() {{
+            String[] centers = proj.getCenters();
+            for (int i = 0; i < centers.length; ++i) {
+                add(centers[i]);
+            }
+        }}.toString());
+        CITS2200ProjectImplementation.useFloydWarshalForAllPairsShortestPaths = false;
 
         System.out.println("Strongly connected components:");
         System.out.println(proj.getIntegerStronglyConnectedComponents().toString());
@@ -216,6 +226,51 @@ public class CITS2200ProjectImplementationTester {
                     }
                 }, "" + size);
             }
+
+            // Graph centers - floyd warshal all pairs shortest paths
+            CITS2200ProjectImplementation.useFloydWarshalForAllPairsShortestPaths = true;
+            System.out.println("--");
+            System.out.println("Graph centers (FW) with random graphs");
+            for (int size = 2; size < maxSize; ++size) {
+                for (int j = 0; j < densities.length; ++j) {
+                    CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
+                    loadRandomGraph(proj, size, densities[j]);
+
+                    PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
+                        public void run(CITS2200ProjectImplementation proj) {
+                            proj.getCenters();
+                        }
+                    }, "" + size);
+                }
+            }
+
+            System.out.println("--");
+            System.out.println("Graph centers (FW) with increasing graphs");
+            for (int size = 2; size < maxSize; ++size) {
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
+                loadIncreasingGraph(proj, size);
+
+                PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
+                    public void run(CITS2200ProjectImplementation proj) {
+                        proj.getCenters();
+                    }
+                }, "" + size);
+            }
+
+            System.out.println("--");
+            System.out.println("Graph centers (FW) with fully connected graph");
+            for (int size = 2; size < maxSize; ++size) {
+                CITS2200ProjectImplementation proj = new CITS2200ProjectImplementation();
+                loadFullyConncetedGraph(proj, size);
+
+                PerformanceAnalysis.run(proj, new PerformanceAnalysis.Task() {
+                    public void run(CITS2200ProjectImplementation proj) {
+                        proj.getCenters();
+                    }
+                }, "" + size);
+            }
+
+            CITS2200ProjectImplementation.useFloydWarshalForAllPairsShortestPaths = false;
 
             // Strongly connected components
             System.out.println("--");

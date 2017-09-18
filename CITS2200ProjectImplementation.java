@@ -1,6 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -146,6 +147,7 @@ public class CITS2200ProjectImplementation implements CITS2200Project {
         int highest = Integer.MIN_VALUE;
 
         for (int i = 0; i < array.length; ++i) {
+            CITS2200ProjectImplementation.opcount++;
             if (array[i] > highest) {
                 highest = array[i];
             }
@@ -153,6 +155,68 @@ public class CITS2200ProjectImplementation implements CITS2200Project {
 
         return highest;
     }
+
+    public static int[][] floydWarshalAllPairsShortestPaths(Map<Integer, List<Integer>> adjacencyList) {
+        int size = adjacencyList.keySet().size();
+        Integer solution[][] = new Integer[size][size];
+
+        for (int i = 0; i < size; ++i) {
+            for (Integer sibling: adjacencyList.get(i)) {
+                if (sibling.equals(i)) {
+                    solution[i][sibling] = Integer.valueOf(0);
+                } else {
+                    solution[i][sibling] = Integer.valueOf(1);
+                }
+            }
+        }
+
+        for (int k = 0; k < size; ++k) {
+            for (int i = 0; i < size; ++i) {
+                for (int j = 0; j < size; ++j) {
+                    CITS2200ProjectImplementation.opcount++;
+
+                    /* Treat length of self-connected node's path as zero
+                     * even if the node is not self-connected */
+                    if (i == j) {
+                        solution[i][j] = 0;
+                        continue;
+                    }
+
+                    /* Don't evaluate connections that don't have
+                     * a path length */
+                    if (solution[i][k] == null ||
+                        solution[k][j] == null) {
+                        continue;
+                    }
+
+                    /* No entry yet, just pick the one we have */
+                    if (solution[i][j] == null) {
+                        solution[i][j] = Integer.valueOf(solution[i][k] + solution[k][j]);
+                    } else {
+                        solution[i][j] = Integer.valueOf(Math.min(solution[i][j],
+                                                         solution[i][k] + solution[k][j]));
+                    }
+                }
+            }
+        }
+
+        /* We don't count this operation, it is just a conversion from the
+         * nullable integer array to something sensible */
+        int ret[][] = new int[size][size];
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
+                if (solution[i][j] != null) {
+                    ret[i][j] = solution[i][j];
+                } else {
+                    ret[i][j] = -1;
+                }
+            }
+        }
+
+        return ret;
+    }
+
+    public static boolean useFloydWarshalForAllPairsShortestPaths = false;
 
     /**
      * Finds all the centers of the page graph. The order of pages
@@ -172,14 +236,26 @@ public class CITS2200ProjectImplementation implements CITS2200Project {
          * we add a new path, which makes it a V log V operation. */
         Queue<VertexWeight> queue = new PriorityQueue<VertexWeight>(11, new PQComparator());
 
-        for (Integer vertex : adjacencyList.keySet()) {
-            int longestShortestPathInArray = getMaxInArray(getShortestPaths(vertex));
+        if (useFloydWarshalForAllPairsShortestPaths) {
+            int allPairs[][] = floydWarshalAllPairsShortestPaths(adjacencyList);
 
-            /* Note that it only makes sense to add a vertex here if
-             * this value is at least greater than one. Otherwise, we would
-             * prefer self-connected vertices or vertices with no connections */
-            if (longestShortestPathInArray > 0) {
-                queue.add(new VertexWeight(vertex, longestShortestPathInArray));
+            for (int i = 0; i < allPairs.length; ++i) {
+                int longestShortestPathInArray = getMaxInArray(allPairs[i]);
+                if (longestShortestPathInArray > 0) {
+                    CITS2200ProjectImplementation.opcount++;
+                    queue.add(new VertexWeight(i, longestShortestPathInArray));
+                }
+            }
+        } else {
+            for (Integer vertex : adjacencyList.keySet()) {
+                int longestShortestPathInArray = getMaxInArray(getShortestPaths(vertex));
+                /* Note that it only makes sense to add a vertex here if
+                 * this value is at least greater than one. Otherwise, we would
+                 * prefer self-connected vertices or vertices with no connections */
+                if (longestShortestPathInArray > 0) {
+                    CITS2200ProjectImplementation.opcount++;
+                    queue.add(new VertexWeight(vertex, longestShortestPathInArray));
+                }
             }
         }
 
@@ -193,6 +269,7 @@ public class CITS2200ProjectImplementation implements CITS2200Project {
 
             while (queue.size() != 0) {
                 node = queue.poll();
+                CITS2200ProjectImplementation.opcount++;
                 if (node.weight > minima) {
                     break;
                 }
